@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邏輯猜數 (盲猜挑戰版)</title>
+    <style>
+        :root {
+            --primary-color: #00ffaa;
+            --secondary-color: #00a8cc;
+            --bg-color: #1a1a1d;
+            --panel-color: #26262b;
+            --text-color: #f0f0f0;
+            --error-color: #ff6b6b;
+            --hint-bg: #323238;
+            --key-bg: #3a3a40;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        .game-container {
+            background-color: var(--panel-color);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border: 1px solid #444;
+        }
+
+        /* 頂部 */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #444;
+            padding-bottom: 15px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .bgm-btn {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .bgm-btn.active {
+            background: var(--primary-color);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            background: #111;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: monospace;
+        }
+
+        /* 線索區 */
+        .hint-section {
+            background-color: var(--hint-bg);
+            border-radius: 10px;
+            padding: 12px;
+            height: 90px;
+            border: 1px solid #555;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .hint-title {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            border-bottom: 1px solid #555;
+            padding-bottom: 4px;
+        }
+
+        .hint-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            overflow-y: auto;
+            align-content: flex-start;
+        }
+
+        .hint-tag {
+            background-color: rgba(0, 168, 204, 0.2);
+            border: 1px solid var(--secondary-color);
+            color: #cdf;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            animation: fadeIn 0.3s;
+        }
+        
+        .hint-placeholder {
+            color: #666;
+            font-style: italic;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* 輸入顯示面板 */
+        .input-display {
+            background-color: #000;
+            border: 2px solid #555;
+            color: var(--primary-color);
+            font-size: 3rem;
+            text-align: center;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            height: 70px;
+            line-height: 70px;
+            margin-top: 5px;
+            transition: border-color 0.2s;
+        }
+        
+        .input-display.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 15px rgba(0, 255, 170, 0.1);
+        }
+
+        /* 狀態訊息列 */
+        .status-message {
+            text-align: center;
+            height: 24px;
+            color: #aaa;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+        
+        .status-message.error { color: var(--error-color); }
+        .status-message.info { color: var(--secondary-color); }
+
+        /* 數字鍵盤 */
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .key {
+            background-color: var(--key-bg);
+            color: white;
+            border: none;
+            padding: 18px 0;
+            font-size: 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            box-shadow: 0 4px 0 #222;
+        }
+
+        .key:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        .key:hover { background-color: #4a4a50; }
+
+        .key-action { background-color: #555; font-size: 1.1rem; }
+        .key-submit { 
+            background-color: var(--primary-color); 
+            color: #1a1a1d; 
+            font-weight: bold;
+            box-shadow: 0 4px 0 #00b377;
+        }
+        .key-clear { 
+            background-color: var(--error-color); 
+            color: white; 
+            box-shadow: 0 4px 0 #c0392b;
+        }
+
+        /* 歷史紀錄區 */
+        .history-section {
+            border-top: 1px solid #444;
+            padding-top: 10px;
+        }
+        
+        .history-title {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+
+        .history-badge {
+            background: #444;
+            color: #ccc;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            text-decoration: line-through;
+            opacity: 0.8;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .shake { animation: shake 0.3s; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none;
+            justify-content: center; align-items: center; z-index: 999;
+            backdrop-filter: blur(5px);
+        }
+        .modal {
+            background: var(--panel-color); padding: 30px; border-radius: 15px;
+            text-align: center; border: 2px solid var(--primary-color);
+            width: 80%; max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <header>
+        <h1>邏輯猜數</h1>
+        <button id="bgm-btn" class="bgm-btn active" onclick="toggleMusic()">🎵 音樂: ON</button>
+    </header>
+
+    <div class="score-row">
+        <span>積分: <span id="score-val" style="color:var(--primary-color)">1000</span></span>
+        <span>猜測次數: <span id="count-val">0</span></span>
+    </div>
+
+    <div class="hint-section">
+        <div class="hint-title">偵探線索</div>
+        <div class="hint-list" id="hint-container">
+            <span class="hint-placeholder">第一回合：盲猜挑戰 (無提示)</span>
+        </div>
+    </div>
+
+    <div class="input-display" id="display"></div>
+
+    <div class="status-message" id="status-msg">請輸入 1-100</div>
+
+    <div class="numpad">
+        <button class="key" onclick="pressKey('1')">1</button>
+        <button class="key" onclick="pressKey('2')">2</button>
+        <button class="key" onclick="pressKey('3')">3</button>
+        
+        <button class="key" onclick="pressKey('4')">4</button>
+        <button class="key" onclick="pressKey('5')">5</button>
+        <button class="key" onclick="pressKey('6')">6</button>
+        
+        <button class="key" onclick="pressKey('7')">7</button>
+        <button class="key" onclick="pressKey('8')">8</button>
+        <button class="key" onclick="pressKey('9')">9</button>
+        
+        <button class="key key-action key-clear" onclick="pressKey('C')">清除</button>
+        <button class="key" onclick="pressKey('0')">0</button>
+        <button class="key key-action key-submit" onclick="submitGuess()">猜測</button>
+    </div>
+
+    <div class="history-section">
+        <div class="history-title">已猜過的數字</div>
+        <div class="history-list" id="history-container"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="win-modal">
+    <div class="modal">
+        <h2 style="color: var(--primary-color)">🎉 任務完成！</h2>
+        <p>謎底數字：<span id="final-target" style="font-size:2rem; font-weight:bold; color: white;"></span></p>
+        <p>最終積分：<span id="final-score" style="color: #ffcc00; font-size: 1.5rem;"></span></p>
+        <button class="key key-submit" style="width: 100%; margin-top: 15px;" onclick="initGame()">再來一局</button>
+    </div>
+</div>
+
+<script>
+    // --- 遊戲變數 ---
+    let targetNum = 0;
+    let currentInput = "";
+    let score = 1000;
+    let guessCount = 0;
+    let hints = [];
+    let hintIndex = 0;
+    let isGameOver = false;
+    let guessedNumbers = [];
+
+    // --- DOM ---
+    const displayEl = document.getElementById('display');
+    const statusEl = document.getElementById('status-msg');
+    const scoreEl = document.getElementById('score-val');
+    const countEl = document.getElementById('count-val');
+    const hintContainer = document.getElementById('hint-container');
+    const historyContainer = document.getElementById('history-container');
+    const bgmBtn = document.getElementById('bgm-btn');
+
+    // --- 音樂系統 (Web Audio API) ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+    // 預設為開啟 (True)，但需要使用者互動才能解除瀏覽器的靜音鎖
+    let isMusicPlaying = true; 
+    let sequenceInterval = null;
+    let noteIndex = 0;
+
+    // 瀏覽器政策解決方案：監聽第一次點擊來啟動 AudioContext
+    document.addEventListener('click', function resumeAudio() {
+        if (audioCtx.state === 'suspended' && isMusicPlaying) {
+            audioCtx.resume();
+        }
+    }, { once: true }); // 只執行一次
+
+    const melody = [523.25, 659.25, 783.99, 523.25, 880.00, 783.99, 659.25, 587.33];
+
+    function toggleMusic() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        isMusicPlaying = !isMusicPlaying;
+        
+        if (isMusicPlaying) {
+            bgmBtn.classList.add('active');
+            bgmBtn.innerText = "🎵 音樂: ON";
+            startSequencer();
+        } else {
+            bgmBtn.classList.remove('active');
+            bgmBtn.innerText = "🎵 音樂: OFF";
+            stopSequencer();
+        }
+    }
+
+    function startSequencer() {
+        if(sequenceInterval) clearInterval(sequenceInterval);
+        noteIndex = 0;
+        sequenceInterval = setInterval(() => {
+            if(isMusicPlaying) { // 雙重確認
+                playMelodyNote(melody[noteIndex]);
+                noteIndex = (noteIndex + 1) % melody.length;
+            }
+        }, 300);
+    }
+
+    function stopSequencer() {
+        clearInterval(sequenceInterval);
+        sequenceInterval = null;
+    }
+
+    function playMelodyNote(freq) {
+        if(audioCtx.state === 'suspended') return; // 避免報錯
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
+
+    function playSfx(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const now = audioCtx.currentTime;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'click') {
+            osc.frequency.setValueAtTime(1200, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        } else if (type === 'error') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(150, now + 0.15);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        } else if (type === 'hint') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+        } else if (type === 'win') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523, now);
+            osc.frequency.setValueAtTime(659, now + 0.1);
+            osc.frequency.setValueAtTime(783, now + 0.2);
+            osc.frequency.setValueAtTime(1046, now + 0.3);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.6);
+            osc.start(now);
+            osc.stop(now + 0.6);
+        }
+    }
+
+    // --- 遊戲邏輯 ---
+    function isPrime(num) {
+        if(num < 2) return false;
+        for(let i = 2; i <= Math.sqrt(num); i++) {
+            if(num % i === 0) return false;
+        }
+        return true;
+    }
+
+    function generateHints(target) {
+        let arr = [];
+        arr.push(target > 50 ? "範圍：51 ~ 100" : "範圍：1 ~ 50");
+        arr.push(target % 2 === 0 ? "特性：偶數" : "特性：奇數");
+        
+        if(target <= 25) arr.push("縮小範圍：1 ~ 25");
+        else if(target <= 50) arr.push("縮小範圍：26 ~ 50");
+        else if(target <= 75) arr.push("縮小範圍：51 ~ 75");
+        else arr.push("縮小範圍：76 ~ 100");
+
+        if(target % 5 === 0) arr.push("是 5 的倍數");
+        else if(target % 3 === 0) arr.push("是 3 的倍數");
+        else if(isPrime(target)) arr.push("這是一個質數");
+        else arr.push("不是 3 或 5 的倍數");
+
+        let sum = Math.floor(target/10) + (target%10);
+        arr.push(`位數和等於 ${sum}`);
+        arr.push(`個位數是 ${target % 10}`);
+
+        let first = arr[0];
+        arr.splice(0, 1);
+        arr.sort(() => Math.random() - 0.5);
+        arr.unshift(first);
+        return arr;
+    }
+
+    function initGame() {
+        targetNum = Math.floor(Math.random() * 100) + 1;
+        hints = generateHints(targetNum);
+        currentInput = "";
+        score = 1000;
+        guessCount = 0;
+        hintIndex = 0;
+        isGameOver = false;
+        guessedNumbers = [];
+
+        document.getElementById('win-modal').style.display = 'none';
+        displayEl.innerText = "";
+        statusEl.innerText = "請輸入 1-100 的數字";
+        statusEl.className = "status-message";
+        
+        // 重置線索區為盲猜狀態
+        hintContainer.innerHTML = '<span class="hint-placeholder">第一回合：盲猜挑戰 (無提示)</span>';
+        
+        historyContainer.innerHTML = "";
+        
+        updateScoreBoard();
+        
+        // 確保音樂狀態是啟動的
+        if(isMusicPlaying) startSequencer();
+        
+        console.log("Answer: " + targetNum);
+    }
+
+    function showNextHint() {
+        // 第一次呼叫會清空 placeholder
+        const placeholder = document.querySelector('.hint-placeholder');
+        if (placeholder) placeholder.remove();
+
+        if (hintIndex < hints.length) {
+            let tag = document.createElement('div');
+            tag.className = 'hint-tag';
+            tag.innerText = `💡 ${hints[hintIndex]}`;
+            hintContainer.appendChild(tag);
+            hintContainer.scrollTop = hintContainer.scrollHeight;
+            hintIndex++;
+            playSfx('hint');
+        } else {
+            let tag = document.createElement('div');
+            tag.className = 'hint-tag';
+            tag.innerText = "⚠️ 沒線索了！";
+            hintContainer.appendChild(tag);
+        }
+    }
+
+    function pressKey(k) {
+        if (isGameOver) return;
+        
+        // 如果瀏覽器還沒解鎖聲音，這裡的點擊會解鎖
+        if (audioCtx.state === 'suspended' && isMusicPlaying) audioCtx.resume();
+
+        if (k === 'C') {
+            currentInput = "";
+            playSfx('click');
+        } else {
+            if (currentInput.length < 3) {
+                currentInput += k;
+                playSfx('click');
+            }
+        }
+        
+        displayEl.innerText = currentInput;
+        displayEl.classList.add('active');
+    }
+
+    function submitGuess() {
+        if (isGameOver || currentInput === "") return;
+
+        let val = parseInt(currentInput);
+
+        if (isNaN(val) || val < 1 || val > 100) {
+            setStatus("請輸入 1 ~ 100 之間的數字", "error");
+            shakeDisplay();
+            playSfx('error');
+            currentInput = "";
+            displayEl.innerText = "";
+            return;
+        }
+
+        if (guessedNumbers.includes(val)) {
+            setStatus(`數字 ${val} 已經猜過了！`, "error");
+            shakeDisplay();
+            playSfx('error');
+            currentInput = "";
+            displayEl.innerText = "";
+            return;
+        }
+
+        guessCount++;
+        guessedNumbers.push(val);
+        addHistory(val);
+
+        if (val === targetNum) {
+            isGameOver = true;
+            playSfx('win');
+            setStatus("恭喜答對！", "info");
+            document.getElementById('final-target').innerText = targetNum;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('win-modal').style.display = 'flex';
+        } else {
+            score -= 100;
+            if (score < 0) score = 0;
+            setStatus(`猜 ${val} 錯了！(扣100分)`, "error");
+            playSfx('error');
+            
+            // 猜錯了才給線索 (包含第一回合盲猜失敗後)
+            showNextHint();
+            
+            currentInput = "";
+            displayEl.innerText = "";
+        }
+        updateScoreBoard();
+    }
+
+    function setStatus(msg, type) {
+        statusEl.innerText = msg;
+        statusEl.className = "status-message " + type;
+    }
+
+    function addHistory(num) {
+        let badge = document.createElement('div');
+        badge.className = 'history-badge';
+        badge.innerText = num;
+        historyContainer.appendChild(badge);
+        historyContainer.scrollTop = historyContainer.scrollHeight;
+    }
+
+    function updateScoreBoard() {
+        scoreEl.innerText = score;
+        countEl.innerText = guessCount;
+    }
+
+    function shakeDisplay() {
+        displayEl.classList.add('shake');
+        setTimeout(() => displayEl.classList.remove('shake'), 300);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if(isGameOver) return;
+        if(e.key >= '0' && e.key <= '9') pressKey(e.key);
+        if(e.key === 'Backspace') pressKey('C');
+        if(e.key === 'Enter') submitGuess();
+    });
+
+    // 啟動遊戲
+    initGame();
+
+</script>
+</body>
+</html>
